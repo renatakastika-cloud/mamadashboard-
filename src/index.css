@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+:root {
+  --rose: #f43f8c;
+  --rose-light: #fde7ef;
+  --lavender: #8b6fd9;
+  --bg: #faf8fb;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  body {
+    background: white;
+  }
+}
+
+.print-only {
+  display: none;
+}
