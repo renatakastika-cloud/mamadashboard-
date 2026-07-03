@@ -1,57 +1,77 @@
-const USERS_KEY = "mama-dashboard:users";
-const SESSION_KEY = "mama-dashboard:session";
+import { supabase } from "../lib/supabaseClient";
 
-function loadUsers() {
-  try {
-    return JSON.parse(localStorage.getItem(USERS_KEY)) || [];
-  } catch {
-    return [];
-  }
+function mapUser(user) {
+  if (!user) return null;
+  return { id: user.id, nombre: user.user_metadata?.nombre || "", email: user.email };
 }
 
-function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
-
-export function signup({ nombre, email, password }) {
+export async function signup({ nombre, email, password }) {
   if (!nombre?.trim() || !email?.trim() || !password) {
     return { ok: false, error: "Completá todos los campos." };
   }
-  const users = loadUsers();
-  const exists = users.some((u) => u.email.toLowerCase() === email.toLowerCase());
-  if (exists) {
-    return { ok: false, error: "Ya existe una cuenta con ese email." };
+  const { data, error } = await supabase.auth.signUp({
+    email: email.trim(),
+    password,
+    options: { data: { nombre: nombre.trim() } },
+  });
+  if (error) {
+    return { ok: false, error: error.message };
   }
-  const user = { nombre: nombre.trim(), email: email.trim(), password };
-  users.push(user);
-  saveUsers(users);
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ nombre: user.nombre, email: user.email }));
-  return { ok: true, user: { nombre: user.nombre, email: user.email } };
+  if (!data.session) {
+    return { ok: true, needsVerification: true, email: email.trim() };
+  }
+  return { ok: true, user: mapUser(data.user) };
 }
 
-export function login({ email, password }) {
+export async function verifySignupCode({ email, code }) {
+  if (!code?.trim()) {
+    return { ok: false, error: "Ingresá el código." };
+  }
+  const { data, error } = await supabase.auth.verifyOtp({
+    email: email.trim(),
+    token: code.trim(),
+    type: "signup",
+  });
+  if (error) {
+    return { ok: false, error: "Código inválido o vencido." };
+  }
+  return { ok: true, user: mapUser(data.user) };
+}
+
+export async function resendSignupCode({ email }) {
+  const { error } = await supabase.auth.resend({ type: "signup", email: email.trim() });
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+export async function login({ email, password }) {
   if (!email?.trim() || !password) {
     return { ok: false, error: "Completá email y contraseña." };
   }
-  const users = loadUsers();
-  const user = users.find(
-    (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-  );
-  if (!user) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.trim(),
+    password,
+  });
+  if (error) {
     return { ok: false, error: "Email o contraseña incorrectos." };
   }
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ nombre: user.nombre, email: user.email }));
-  return { ok: true, user: { nombre: user.nombre, email: user.email } };
+  return { ok: true, user: mapUser(data.user) };
 }
 
-export function getSession() {
-  try {
-    return JSON.parse(localStorage.getItem(SESSION_KEY));
-  } catch {
-    return null;
-  }
+export async function getSession() {
+  const { data } = await supabase.auth.getSession();
+  return mapUser(data.session?.user);
 }
 
-export function logout() {
-  localStorage.removeItem(SESSION_KEY);
+export function onAuthChange(callback) {
+  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    callback(mapUser(session?.user));
+  });
+  return () => data.subscription.unsubscribe();
+}
+
+export async function logout() {
+  await supabase.auth.signOut();
 }

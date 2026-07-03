@@ -48,7 +48,7 @@ export default function InicioPanel({ nombre, onNavigate }) {
   const [entradasDiario, setEntradasDiario] = useState([]);
 
   useEffect(() => {
-    setSemanaActual(loadPerfil().semanaActual);
+    loadPerfil().then((p) => setSemanaActual(p.semanaActual));
     setCitas(loadCitas());
     setEntradasDiario(loadEntradas());
   }, []);

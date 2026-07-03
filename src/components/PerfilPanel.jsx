@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Header from "./Header";
-import { loadPerfil, savePerfil } from "../data/perfil";
+import { emptyPerfil, loadPerfil, savePerfil } from "../data/perfil";
 import { totalWeeks } from "../data/seguimientoSemanal";
 
 const inputClass =
@@ -13,11 +13,11 @@ const otrasTarjetas = [
 ];
 
 export default function PerfilPanel({ onLogout }) {
-  const [perfil, setPerfil] = useState(loadPerfil());
+  const [perfil, setPerfil] = useState(emptyPerfil);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    setPerfil(loadPerfil());
+    loadPerfil().then(setPerfil);
   }, []);
 
   const update = (field, value) => {
@@ -25,8 +25,8 @@ export default function PerfilPanel({ onLogout }) {
     setSaved(false);
   };
 
-  const handleGuardar = () => {
-    savePerfil(perfil);
+  const handleGuardar = async () => {
+    await savePerfil(perfil);
     setSaved(true);
   };
 

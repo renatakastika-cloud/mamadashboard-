@@ -1,4 +1,4 @@
-const STORAGE_KEY = "mama-dashboard:perfil";
+import { supabase } from "../lib/supabaseClient";
 
 export const emptyPerfil = {
   semanaActual: 24,
@@ -7,15 +7,41 @@ export const emptyPerfil = {
   hospital: "",
 };
 
-export function loadPerfil() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return saved ? { ...emptyPerfil, ...saved } : { ...emptyPerfil };
-  } catch {
-    return { ...emptyPerfil };
-  }
+function mapRow(row) {
+  if (!row) return { ...emptyPerfil };
+  return {
+    semanaActual: row.semana_actual ?? emptyPerfil.semanaActual,
+    fpp: row.fpp ?? "",
+    medico: row.medico ?? "",
+    hospital: row.hospital ?? "",
+  };
 }
 
-export function savePerfil(perfil) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(perfil));
+export async function loadPerfil() {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return { ...emptyPerfil };
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("semana_actual, fpp, medico, hospital")
+    .eq("id", userData.user.id)
+    .single();
+
+  if (error) return { ...emptyPerfil };
+  return mapRow(data);
+}
+
+export async function savePerfil(perfil) {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return;
+
+  await supabase
+    .from("profiles")
+    .update({
+      semana_actual: perfil.semanaActual,
+      fpp: perfil.fpp || null,
+      medico: perfil.medico,
+      hospital: perfil.hospital,
+    })
+    .eq("id", userData.user.id);
 }

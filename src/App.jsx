@@ -7,10 +7,10 @@ import PerfilPanel from "./components/PerfilPanel";
 import FeatureListPanel from "./components/FeatureListPanel";
 import LandingPage from "./components/landing/LandingPage";
 import AuthPage from "./components/auth/AuthPage";
-import { getSession, logout } from "./data/auth";
+import { getSession, logout, onAuthChange } from "./data/auth";
 
 export default function App() {
-  const [mode, setMode] = useState("landing");
+  const [mode, setMode] = useState("loading");
   const [authTab, setAuthTab] = useState("login");
   const [user, setUser] = useState(null);
   const [active, setActive] = useState("inicio");
@@ -24,11 +24,17 @@ export default function App() {
   };
 
   useEffect(() => {
-    const session = getSession();
-    if (session) {
+    getSession().then((session) => {
       setUser(session);
-      setMode("dashboard");
-    }
+      setMode(session ? "dashboard" : "landing");
+    });
+
+    return onAuthChange((session) => {
+      if (!session) {
+        setUser(null);
+        setMode((current) => (current === "dashboard" ? "landing" : current));
+      }
+    });
   }, []);
 
   const handleAuthSuccess = (loggedUser) => {
@@ -41,6 +47,10 @@ export default function App() {
     setUser(null);
     setMode("landing");
   };
+
+  if (mode === "loading") {
+    return null;
+  }
 
   if (mode === "landing") {
     return (

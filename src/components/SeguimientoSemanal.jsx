@@ -35,12 +35,16 @@ function saveRegistro(all) {
 }
 
 export default function SeguimientoSemanal({ onBack }) {
-  const [week, setWeek] = useState(() => loadPerfil().semanaActual);
+  const [week, setWeek] = useState(24);
   const [registro, setRegistro] = useState({});
   const [saved, setSaved] = useState(false);
 
   const data = getWeekData(week);
   const color = trimesterColor[data.trimester];
+
+  useEffect(() => {
+    loadPerfil().then((p) => setWeek(p.semanaActual));
+  }, []);
 
   useEffect(() => {
     const all = loadRegistro();
