@@ -12,7 +12,7 @@ const otrasTarjetas = [
   { icon: "🔒", title: "Privacidad", desc: "Control total sobre tus datos compartidos" },
 ];
 
-export default function PerfilPanel() {
+export default function PerfilPanel({ onLogout }) {
   const [perfil, setPerfil] = useState(loadPerfil());
   const [saved, setSaved] = useState(false);
 
@@ -120,6 +120,15 @@ export default function PerfilPanel() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="mt-6 pt-6 border-t border-rose-100">
+        <button
+          onClick={onLogout}
+          className="text-sm text-rose-500 hover:text-rose-600 font-medium"
+        >
+          Cerrar sesión
+        </button>
       </div>
     </div>
   );

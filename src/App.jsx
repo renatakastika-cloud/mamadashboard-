@@ -75,7 +75,7 @@ export default function App() {
         ) : active === "bienestar" ? (
           <BienestarPanel />
         ) : active === "perfil" ? (
-          <PerfilPanel />
+          <PerfilPanel onLogout={handleLogout} />
         ) : (
           <FeatureListPanel sectionId={active} />
         )}
