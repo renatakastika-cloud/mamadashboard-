@@ -163,9 +163,11 @@ export default function LandingPage({ onGoToAuth, onDevPreview }) {
 
       <footer className="max-w-6xl mx-auto px-6 py-8 border-t border-rose-100 flex items-center justify-between text-xs text-gray-400">
         <span>© 2026 Mamá App</span>
-        <button onClick={onDevPreview} className="hover:text-rose-400">
-          Vista previa del dashboard (solo desarrollo)
-        </button>
+        {import.meta.env.DEV && (
+          <button onClick={onDevPreview} className="hover:text-rose-400">
+            Vista previa del dashboard (solo desarrollo)
+          </button>
+        )}
       </footer>
     </div>
   );

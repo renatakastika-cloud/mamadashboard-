@@ -12,6 +12,19 @@ const otrasTarjetas = [
   { icon: "🔒", title: "Privacidad", desc: "Control total sobre tus datos compartidos" },
 ];
 
+const CANTIDAD_OPTIONS = [
+  { value: 1, label: "1 bebé" },
+  { value: 2, label: "Mellizos" },
+  { value: 3, label: "3 o más" },
+];
+
+const SEXO_OPTIONS = [
+  { value: "nena", label: "Nena" },
+  { value: "nene", label: "Nene" },
+  { value: "mixto", label: "Uno de cada uno" },
+  { value: "no-se", label: "Todavía no sé" },
+];
+
 export default function PerfilPanel({ onLogout }) {
   const [perfil, setPerfil] = useState(emptyPerfil);
   const [saved, setSaved] = useState(false);
@@ -90,6 +103,46 @@ export default function PerfilPanel({ onLogout }) {
               placeholder="Ej: Clínica del Sol"
               className={inputClass}
             />
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label className="text-xs text-gray-500 block mb-2">¿Cuántos bebés esperás?</label>
+          <div className="flex gap-2">
+            {CANTIDAD_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => update("cantidadBebes", opt.value)}
+                className={`flex-1 text-sm font-medium py-2 rounded-xl border transition-colors ${
+                  perfil.cantidadBebes === opt.value
+                    ? "bg-rose-500 text-white border-rose-500"
+                    : "bg-white text-gray-600 border-rose-100 hover:border-rose-300"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label className="text-xs text-gray-500 block mb-2">¿Sabés el sexo?</label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {SEXO_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => update("sexo", opt.value)}
+                className={`text-sm font-medium py-2 rounded-xl border transition-colors ${
+                  perfil.sexo === opt.value
+                    ? "bg-rose-500 text-white border-rose-500"
+                    : "bg-white text-gray-600 border-rose-100 hover:border-rose-300"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
         </div>
 

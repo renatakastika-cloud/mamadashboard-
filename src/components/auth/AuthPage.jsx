@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { login, resendSignupCode, signup, verifySignupCode } from "../../data/auth";
+import { login, signup } from "../../data/auth";
 
 const inputClass =
   "w-full border border-rose-100 rounded-xl p-2.5 text-sm text-gray-700 focus:outline-none focus:border-rose-300";
@@ -38,7 +38,6 @@ function PasswordChecklist({ password }) {
 }
 
 export default function AuthPage({ initialTab = "login", onSuccess, onBack }) {
-  const [step, setStep] = useState("form");
   const [tab, setTab] = useState(initialTab);
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
@@ -46,12 +45,12 @@ export default function AuthPage({ initialTab = "login", onSuccess, onBack }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [code, setCode] = useState("");
-  const [resendMsg, setResendMsg] = useState("");
+  const [infoMsg, setInfoMsg] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setInfoMsg("");
 
     if (tab === "signup") {
       if (!PASSWORD_RULES.every((rule) => rule.test(password))) {
@@ -76,46 +75,20 @@ export default function AuthPage({ initialTab = "login", onSuccess, onBack }) {
       return;
     }
     if (result.needsVerification) {
-      setStep("verify");
+      setTab("login");
+      setPassword("");
+      setConfirmPassword("");
+      setInfoMsg("Cuenta creada. Iniciá sesión con tu email y contraseña.");
       return;
     }
     onSuccess(result.user);
-  };
-
-  const handleVerify = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    const result = await verifySignupCode({ email, code });
-    setLoading(false);
-
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
-    onSuccess(result.user);
-  };
-
-  const handleResend = async () => {
-    setError("");
-    setResendMsg("");
-    const result = await resendSignupCode({ email });
-    setResendMsg(result.ok ? "Te reenviamos el código." : result.error);
   };
 
   return (
     <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center px-6">
       <div className="w-full max-w-sm">
         <button
-          onClick={() => {
-            if (step === "verify") {
-              setStep("form");
-              setError("");
-              setResendMsg("");
-              return;
-            }
-            onBack();
-          }}
+          onClick={onBack}
           className="text-sm text-gray-500 hover:text-rose-500 mb-6 flex items-center gap-1"
         >
           ← Volver
@@ -126,53 +99,10 @@ export default function AuthPage({ initialTab = "login", onSuccess, onBack }) {
           <span className="font-semibold text-gray-900">Mamá App</span>
         </div>
 
-        {step === "verify" ? (
-          <div className="bg-white rounded-2xl border border-rose-100 shadow-sm p-7">
-            <h2 className="text-base font-semibold text-gray-900 mb-1">Confirmá tu email</h2>
-            <p className="text-xs text-gray-500 mb-5">
-              Te enviamos un código a <span className="font-medium text-gray-700">{email}</span>.
-              Ingresalo para activar tu cuenta.
-            </p>
-
-            <form onSubmit={handleVerify}>
-              <div className="mb-2">
-                <label className="text-xs text-gray-500 block mb-1">Código de verificación</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="123456"
-                  className={`${inputClass} text-center tracking-[0.3em]`}
-                  maxLength={6}
-                />
-              </div>
-
-              {error && <p className="text-xs text-red-500 mb-3 mt-3">{error}</p>}
-              {resendMsg && <p className="text-xs text-gray-500 mb-3 mt-1">{resendMsg}</p>}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-rose-500 text-white text-sm font-medium py-2.5 rounded-xl hover:bg-rose-600 transition-colors mt-3 disabled:opacity-60"
-              >
-                {loading ? "Verificando…" : "Verificar código"}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleResend}
-                className="w-full text-xs text-rose-500 hover:text-rose-600 mt-3"
-              >
-                Reenviar código
-              </button>
-            </form>
-          </div>
-        ) : (
         <div className="bg-white rounded-2xl border border-rose-100 shadow-sm p-7">
           <div className="flex bg-rose-50 rounded-xl p-1 mb-6">
             <button
-              onClick={() => { setTab("login"); setError(""); }}
+              onClick={() => { setTab("login"); setError(""); setInfoMsg(""); }}
               className={`flex-1 text-sm font-medium py-2 rounded-lg transition-colors ${
                 tab === "login" ? "bg-white text-rose-600 shadow-sm" : "text-gray-500"
               }`}
@@ -180,7 +110,7 @@ export default function AuthPage({ initialTab = "login", onSuccess, onBack }) {
               Iniciar sesión
             </button>
             <button
-              onClick={() => { setTab("signup"); setError(""); }}
+              onClick={() => { setTab("signup"); setError(""); setInfoMsg(""); }}
               className={`flex-1 text-sm font-medium py-2 rounded-lg transition-colors ${
                 tab === "signup" ? "bg-white text-rose-600 shadow-sm" : "text-gray-500"
               }`}
@@ -190,6 +120,7 @@ export default function AuthPage({ initialTab = "login", onSuccess, onBack }) {
           </div>
 
           <form onSubmit={handleSubmit}>
+            {infoMsg && <p className="text-xs text-green-600 mb-3">{infoMsg}</p>}
             {tab === "signup" && (
               <div className="mb-3">
                 <label className="text-xs text-gray-500 block mb-1">Nombre</label>
@@ -253,7 +184,6 @@ export default function AuthPage({ initialTab = "login", onSuccess, onBack }) {
             </button>
           </form>
         </div>
-        )}
 
         <p className="text-xs text-gray-400 text-center mt-5">
           Tus datos se guardan de forma segura en tu cuenta

@@ -5,6 +5,9 @@ export const emptyPerfil = {
   fpp: "",
   medico: "",
   hospital: "",
+  cantidadBebes: 1,
+  sexo: "",
+  onboardingCompleted: false,
 };
 
 function mapRow(row) {
@@ -14,6 +17,9 @@ function mapRow(row) {
     fpp: row.fpp ?? "",
     medico: row.medico ?? "",
     hospital: row.hospital ?? "",
+    cantidadBebes: row.cantidad_bebes ?? emptyPerfil.cantidadBebes,
+    sexo: row.sexo ?? "",
+    onboardingCompleted: row.onboarding_completed ?? false,
   };
 }
 
@@ -23,7 +29,7 @@ export async function loadPerfil() {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("semana_actual, fpp, medico, hospital")
+    .select("semana_actual, fpp, medico, hospital, cantidad_bebes, sexo, onboarding_completed")
     .eq("id", userData.user.id)
     .single();
 
@@ -35,13 +41,14 @@ export async function savePerfil(perfil) {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return;
 
-  await supabase
-    .from("profiles")
-    .update({
-      semana_actual: perfil.semanaActual,
-      fpp: perfil.fpp || null,
-      medico: perfil.medico,
-      hospital: perfil.hospital,
-    })
-    .eq("id", userData.user.id);
+  await supabase.from("profiles").upsert({
+    id: userData.user.id,
+    semana_actual: perfil.semanaActual,
+    fpp: perfil.fpp || null,
+    medico: perfil.medico,
+    hospital: perfil.hospital,
+    cantidad_bebes: perfil.cantidadBebes,
+    sexo: perfil.sexo || null,
+    onboarding_completed: perfil.onboardingCompleted ?? true,
+  });
 }

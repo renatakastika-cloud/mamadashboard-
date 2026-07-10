@@ -7,7 +7,9 @@ import PerfilPanel from "./components/PerfilPanel";
 import FeatureListPanel from "./components/FeatureListPanel";
 import LandingPage from "./components/landing/LandingPage";
 import AuthPage from "./components/auth/AuthPage";
+import OnboardingForm from "./components/onboarding/OnboardingForm";
 import { getSession, logout, onAuthChange } from "./data/auth";
+import { loadPerfil } from "./data/perfil";
 
 export default function App() {
   const [mode, setMode] = useState("loading");
@@ -23,22 +25,37 @@ export default function App() {
     setNavKey((k) => k + 1);
   };
 
+  const enterApp = async (session) => {
+    setUser(session);
+    const perfil = await loadPerfil();
+    setMode(perfil.onboardingCompleted ? "dashboard" : "onboarding");
+  };
+
   useEffect(() => {
     getSession().then((session) => {
-      setUser(session);
-      setMode(session ? "dashboard" : "landing");
+      if (session) {
+        enterApp(session);
+      } else {
+        setUser(null);
+        setMode("landing");
+      }
     });
 
     return onAuthChange((session) => {
-      if (!session) {
+      if (session) {
+        enterApp(session);
+      } else {
         setUser(null);
-        setMode((current) => (current === "dashboard" ? "landing" : current));
+        setMode((current) => (current === "dashboard" || current === "onboarding" ? "landing" : current));
       }
     });
   }, []);
 
   const handleAuthSuccess = (loggedUser) => {
-    setUser(loggedUser);
+    enterApp(loggedUser);
+  };
+
+  const handleOnboardingComplete = () => {
     setMode("dashboard");
   };
 
@@ -72,6 +89,10 @@ export default function App() {
         onBack={() => setMode("landing")}
       />
     );
+  }
+
+  if (mode === "onboarding") {
+    return <OnboardingForm nombre={user?.nombre} onComplete={handleOnboardingComplete} />;
   }
 
   return (
