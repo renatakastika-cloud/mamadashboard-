@@ -221,6 +221,8 @@ export default function RegistroDiarioModal({ fecha, sintomasSemana = [], onClos
                     className={`text-xs text-left rounded-xl px-2.5 py-1.5 border transition-colors flex items-center gap-1 ${
                       checked
                         ? "bg-rose-500 text-white border-rose-500"
+                        : s.atencion
+                        ? "bg-amber-50 text-amber-800 border-amber-200 hover:border-amber-400"
                         : "bg-white text-gray-700 border-rose-100 hover:border-rose-300"
                     }`}
                   >
@@ -230,6 +232,10 @@ export default function RegistroDiarioModal({ fecha, sintomasSemana = [], onClos
                 );
               })}
             </div>
+            <p className="text-xs text-amber-700 mb-3">
+              🟡 Los síntomas en amarillo pueden valer la pena comentarlos con tu médico — no es un
+              diagnóstico, solo una sugerencia.
+            </p>
 
             <p className="text-xs text-gray-500 mb-1">¿No está en la lista? Escribilo vos</p>
             <div className="flex gap-2">

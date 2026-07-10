@@ -4,7 +4,8 @@ import RegistroDiarioModal from "./RegistroDiarioModal";
 import { getWeekData, totalWeeks } from "../data/seguimientoSemanal";
 import { loadPerfil } from "../data/perfil";
 import { loadCitas, toISODate as toISODateCita } from "../data/citas";
-import { loadRegistros } from "../data/registroDiario";
+import { loadRegistros, calcularStreak } from "../data/registroDiario";
+import { esSintomaDeAtencion } from "../data/sintomas";
 
 const tipoCitaIconos = {
   "Control obstétrico": "🩺",
@@ -63,6 +64,13 @@ export default function InicioPanel({ nombre, onNavigate }) {
       .filter((c) => c.fecha >= todayISO)
       .sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora))[0];
   }, [citas, todayISO]);
+
+  const streak = useMemo(() => calcularStreak(registros, todayISO), [registros, todayISO]);
+
+  const sintomasAtencionHoy = useMemo(() => {
+    const registroHoy = registros[todayISO];
+    return (registroHoy?.sintomas || []).filter(esSintomaDeAtencion);
+  }, [registros, todayISO]);
 
   const cambiarSemana = (delta) => {
     setRefDate((prev) => {
@@ -131,9 +139,16 @@ export default function InicioPanel({ nombre, onNavigate }) {
       {/* Encabezado */}
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-xl font-semibold text-gray-900">Hola, {nombre || "mamá"} 👋</h2>
-        <button className="w-9 h-9 rounded-full bg-white border border-rose-100 flex items-center justify-center text-gray-400 hover:text-rose-500">
-          🔔
-        </button>
+        <div className="flex items-center gap-2">
+          {streak > 0 && (
+            <span className="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold px-3 py-1.5 rounded-full">
+              🔥 {streak} {streak === 1 ? "día seguido" : "días seguidos"}
+            </span>
+          )}
+          <button className="w-9 h-9 rounded-full bg-white border border-rose-100 flex items-center justify-center text-gray-400 hover:text-rose-500">
+            🔔
+          </button>
+        </div>
       </div>
 
       <p className="text-sm font-semibold text-gray-700 mb-2 capitalize">
@@ -312,9 +327,19 @@ export default function InicioPanel({ nombre, onNavigate }) {
             )}
           </div>
 
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-amber-800 text-sm">
-            ⚠️ Sin alertas médicas activas. Todo en orden esta semana.
-          </div>
+          {sintomasAtencionHoy.length > 0 ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-amber-800 text-sm">
+              <p className="font-medium mb-1">💡 Vale la pena comentarlo con tu médico</p>
+              <p>
+                Hoy registraste: {sintomasAtencionHoy.join(", ")}. Esto no es un diagnóstico, es
+                solo una sugerencia basada en lo que registraste vos misma.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-amber-800 text-sm">
+              ⚠️ Sin alertas activas. Todo en orden esta semana.
+            </div>
+          )}
         </div>
       </div>
 

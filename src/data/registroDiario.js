@@ -32,3 +32,22 @@ export function guardarRegistroDelDia(fecha, registro) {
   saveRegistros(all);
   return all[fecha];
 }
+
+function sumarDias(iso, delta) {
+  const d = new Date(iso + "T00:00:00");
+  d.setDate(d.getDate() + delta);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+export function calcularStreak(registros, hoyISO) {
+  let streak = 0;
+  let cursor = registros[hoyISO] ? hoyISO : sumarDias(hoyISO, -1);
+  while (registros[cursor]) {
+    streak++;
+    cursor = sumarDias(cursor, -1);
+  }
+  return streak;
+}

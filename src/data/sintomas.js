@@ -29,10 +29,24 @@ export const catalogoSintomas = [
   { label: "Dolor de cabeza", icon: "🤯" },
   { label: "Estreñimiento", icon: "🚿" },
   { label: "Venas varicosas", icon: "🦵" },
+
+  // Señales para comentar con el médico (no son un diagnóstico, solo una sugerencia)
+  { label: "Sangrado vaginal", icon: "🩸", atencion: true },
+  { label: "Fiebre", icon: "🌡️", atencion: true },
+  { label: "Dolor de cabeza fuerte o que no pasa", icon: "🤕", atencion: true },
+  { label: "Hinchazón repentina en cara o manos", icon: "😳", atencion: true },
+  { label: "Disminución de los movimientos del bebé", icon: "👶", atencion: true },
+  { label: "Pérdida de líquido", icon: "💧", atencion: true },
+  { label: "Dolor abdominal intenso", icon: "😣", atencion: true },
+  { label: "Visión borrosa", icon: "👁️", atencion: true },
 ];
 
 const ICONO_DEFECTO = "📝";
 
 export function iconoSintoma(label) {
   return catalogoSintomas.find((s) => s.label === label)?.icon || ICONO_DEFECTO;
+}
+
+export function esSintomaDeAtencion(label) {
+  return catalogoSintomas.some((s) => s.label === label && s.atencion);
 }
