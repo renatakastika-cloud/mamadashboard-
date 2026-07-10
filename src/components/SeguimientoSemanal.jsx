@@ -10,34 +10,8 @@ const trimesterColor = {
   3: { bg: "#fff4e5", text: "#d97706" },
 };
 
-const STORAGE_KEY = "mama-dashboard:registro-semanal";
-
-const animoOpciones = [
-  { value: 1, emoji: "😢" },
-  { value: 2, emoji: "😕" },
-  { value: 3, emoji: "😐" },
-  { value: 4, emoji: "🙂" },
-  { value: 5, emoji: "😄" },
-];
-
-const escalaOpciones = [1, 2, 3, 4, 5];
-
-function loadRegistro() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-  } catch {
-    return {};
-  }
-}
-
-function saveRegistro(all) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-}
-
 export default function SeguimientoSemanal({ onBack }) {
   const [week, setWeek] = useState(24);
-  const [registro, setRegistro] = useState({});
-  const [saved, setSaved] = useState(false);
 
   const data = getWeekData(week);
   const color = trimesterColor[data.trimester];
@@ -45,38 +19,6 @@ export default function SeguimientoSemanal({ onBack }) {
   useEffect(() => {
     loadPerfil().then((p) => setWeek(p.semanaActual));
   }, []);
-
-  useEffect(() => {
-    const all = loadRegistro();
-    setRegistro(
-      all[week] || { sintomas: [], nota: "", animo: null, energia: null, sueno: null }
-    );
-    setSaved(false);
-  }, [week]);
-
-  const toggleSintoma = (s) => {
-    setRegistro((prev) => {
-      const sintomas = prev.sintomas.includes(s)
-        ? prev.sintomas.filter((x) => x !== s)
-        : [...prev.sintomas, s];
-      return { ...prev, sintomas };
-    });
-    setSaved(false);
-  };
-
-  const updateField = (field, value) => {
-    setRegistro((prev) => ({ ...prev, [field]: value }));
-    setSaved(false);
-  };
-
-  const updateNota = (nota) => updateField("nota", nota);
-
-  const handleGuardar = () => {
-    const all = loadRegistro();
-    all[week] = registro;
-    saveRegistro(all);
-    setSaved(true);
-  };
 
   return (
     <div>
@@ -89,7 +31,7 @@ export default function SeguimientoSemanal({ onBack }) {
 
       <Header
         title="📅 Seguimiento semanal"
-        subtitle="Ficha del bebé semana a semana + registro de cómo te sentiste tú"
+        subtitle="Ficha del bebé semana a semana. Registrá cómo te sentiste desde el botón + en Inicio."
       />
 
       <div className="bg-white rounded-2xl border border-rose-100 p-5 shadow-sm mb-6">
@@ -142,110 +84,22 @@ export default function SeguimientoSemanal({ onBack }) {
       </div>
 
       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-        ¿Cómo te sentiste tú esta semana?
+        Síntomas esperados esta semana
       </h3>
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-rose-100">
-        <p className="text-sm text-gray-500 mb-3">
-          Ficha rápida — tocá las opciones, te toma unos segundos
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {data.symptoms.map((s) => (
+            <div
+              key={s}
+              className="text-sm text-left rounded-xl px-3 py-2 border border-rose-100 bg-rose-50 text-gray-700"
+            >
+              {s}
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-gray-400 mt-4">
+          Podés marcar cuáles tuviste vos en el registro del día, desde el botón + en Inicio.
         </p>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-          <div>
-            <p className="text-xs text-gray-500 mb-2">Estado de ánimo</p>
-            <div className="flex gap-2">
-              {animoOpciones.map((o) => (
-                <button
-                  key={o.value}
-                  onClick={() => updateField("animo", o.value)}
-                  className={`text-xl w-9 h-9 flex items-center justify-center rounded-full border transition-colors ${
-                    registro.animo === o.value
-                      ? "bg-rose-500 border-rose-500"
-                      : "bg-rose-50 border-rose-100 hover:border-rose-300"
-                  }`}
-                >
-                  {o.emoji}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs text-gray-500 mb-2">Nivel de energía (1-5)</p>
-            <div className="flex gap-2">
-              {escalaOpciones.map((n) => (
-                <button
-                  key={n}
-                  onClick={() => updateField("energia", n)}
-                  className={`text-sm w-9 h-9 rounded-full border font-medium transition-colors ${
-                    registro.energia === n
-                      ? "bg-rose-500 text-white border-rose-500"
-                      : "bg-rose-50 text-gray-700 border-rose-100 hover:border-rose-300"
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs text-gray-500 mb-2">Calidad del sueño (1-5)</p>
-            <div className="flex gap-2">
-              {escalaOpciones.map((n) => (
-                <button
-                  key={n}
-                  onClick={() => updateField("sueno", n)}
-                  className={`text-sm w-9 h-9 rounded-full border font-medium transition-colors ${
-                    registro.sueno === n
-                      ? "bg-rose-500 text-white border-rose-500"
-                      : "bg-rose-50 text-gray-700 border-rose-100 hover:border-rose-300"
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <p className="text-xs text-gray-500 mb-2">Síntomas esperados que tuviste</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-          {data.symptoms.map((s) => {
-            const checked = registro.sintomas?.includes(s);
-            return (
-              <button
-                key={s}
-                onClick={() => toggleSintoma(s)}
-                className={`text-sm text-left rounded-xl px-3 py-2 border transition-colors ${
-                  checked
-                    ? "bg-rose-500 text-white border-rose-500"
-                    : "bg-rose-50 text-gray-700 border-rose-100 hover:border-rose-300"
-                }`}
-              >
-                {checked ? "✓ " : ""}{s}
-              </button>
-            );
-          })}
-        </div>
-
-        <label className="text-sm text-gray-500 block mb-1">Notas de la semana (opcional)</label>
-        <textarea
-          value={registro.nota || ""}
-          onChange={(e) => updateNota(e.target.value)}
-          placeholder="Ej: tuve un poco de hinchazón en los pies por la tarde..."
-          className="w-full border border-rose-100 rounded-xl p-3 text-sm text-gray-700 focus:outline-none focus:border-rose-300 resize-none"
-          rows={3}
-        />
-
-        <div className="flex items-center gap-3 mt-4">
-          <button
-            onClick={handleGuardar}
-            className="bg-rose-500 text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-rose-600 transition-colors"
-          >
-            Guardar registro de la semana
-          </button>
-          {saved && <span className="text-sm text-green-600">Guardado ✓</span>}
-        </div>
       </div>
     </div>
   );

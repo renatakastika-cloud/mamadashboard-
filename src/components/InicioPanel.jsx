@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import CircularProgress from "./CircularProgress";
+import RegistroDiarioModal from "./RegistroDiarioModal";
 import { getWeekData, totalWeeks } from "../data/seguimientoSemanal";
 import { loadPerfil } from "../data/perfil";
 import { loadCitas, toISODate as toISODateCita } from "../data/citas";
-import { loadEntradas } from "../data/diarioLibre";
+import { loadRegistros } from "../data/registroDiario";
 
 const tipoCitaIconos = {
   "Control obstétrico": "🩺",
@@ -45,12 +46,13 @@ export default function InicioPanel({ nombre, onNavigate }) {
 
   const [semanaActual, setSemanaActual] = useState(24);
   const [citas, setCitas] = useState([]);
-  const [entradasDiario, setEntradasDiario] = useState([]);
+  const [registros, setRegistros] = useState({});
+  const [modalAbierto, setModalAbierto] = useState(false);
 
   useEffect(() => {
     loadPerfil().then((p) => setSemanaActual(p.semanaActual));
     setCitas(loadCitas());
-    setEntradasDiario(loadEntradas());
+    setRegistros(loadRegistros());
   }, []);
 
   const data = useMemo(() => getWeekData(semanaActual), [semanaActual]);
@@ -74,7 +76,7 @@ export default function InicioPanel({ nombre, onNavigate }) {
   const esFuturo = selectedDate > todayISO;
 
   const citasDelDia = citas.filter((c) => c.fecha === selectedDate);
-  const entradasDelDia = entradasDiario.filter((e) => e.fecha === selectedDate);
+  const registroDelDia = registros[selectedDate] || null;
 
   const itemsRegistrados = useMemo(() => {
     const deCitas = citasDelDia.map((c) => ({
@@ -85,27 +87,33 @@ export default function InicioPanel({ nombre, onNavigate }) {
       subtitle: [c.hora, c.lugar].filter(Boolean).join(" · ") || "Sin hora ni lugar",
       onClick: () => onNavigate?.("embarazo", "citas"),
     }));
-    const deDiario = entradasDelDia.map((e) => ({
-      id: `diario-${e.id}`,
-      hora: e.hora || "",
-      icon: "💭",
-      title: e.prompt ? "Entrada de diario" : "Escribiste en tu diario",
-      subtitle: e.texto ? e.texto.slice(0, 60) + (e.texto.length > 60 ? "…" : "") : e.prompt || "",
-      onClick: () => onNavigate?.("bienestar"),
-    }));
-    return [...deCitas, ...deDiario].sort((a, b) => a.hora.localeCompare(b.hora));
-  }, [citasDelDia, entradasDelDia, onNavigate]);
+    const deRegistro = registroDelDia
+      ? [
+          {
+            id: "registro-dia",
+            hora: "",
+            icon: "📝",
+            title: "Registro del día",
+            subtitle: registroDelDia.nota
+              ? registroDelDia.nota.slice(0, 60) + (registroDelDia.nota.length > 60 ? "…" : "")
+              : "Ánimo, energía y sueño registrados",
+            onClick: () => setModalAbierto(true),
+          },
+        ]
+      : [];
+    return [...deCitas, ...deRegistro].sort((a, b) => a.hora.localeCompare(b.hora));
+  }, [citasDelDia, registroDelDia, onNavigate]);
 
   const sugerencias = useMemo(() => {
     if (!esHoy) return [];
     const items = [];
-    if (entradasDelDia.length === 0) {
+    if (!registroDelDia) {
       items.push({
-        id: "sugerido-diario",
-        icon: "💭",
-        title: "Escribí en tu diario",
+        id: "sugerido-registro",
+        icon: "📝",
+        title: "Completá tu registro de hoy",
         subtitle: "Todavía no registraste cómo te sentiste hoy",
-        onClick: () => onNavigate?.("bienestar"),
+        onClick: () => setModalAbierto(true),
       });
     }
     items.push({
@@ -116,7 +124,7 @@ export default function InicioPanel({ nombre, onNavigate }) {
       onClick: () => onNavigate?.("multimedia"),
     });
     return items;
-  }, [esHoy, entradasDelDia, onNavigate, semanaActual]);
+  }, [esHoy, registroDelDia, onNavigate, semanaActual]);
 
   return (
     <div>
@@ -141,8 +149,7 @@ export default function InicioPanel({ nombre, onNavigate }) {
             const iso = toISODateCita(d);
             const isToday = iso === todayISO;
             const isSelected = iso === selectedDate;
-            const tieneAlgo =
-              citas.some((c) => c.fecha === iso) || entradasDiario.some((e) => e.fecha === iso);
+            const tieneAlgo = citas.some((c) => c.fecha === iso) || Boolean(registros[iso]);
             return (
               <button
                 key={i}
@@ -310,6 +317,23 @@ export default function InicioPanel({ nombre, onNavigate }) {
           </div>
         </div>
       </div>
+
+      <button
+        onClick={() => setModalAbierto(true)}
+        className="fixed bottom-8 right-8 flex items-center gap-2 bg-rose-500 text-white pl-5 pr-6 py-4 rounded-full shadow-xl shadow-rose-500/30 hover:bg-rose-600 hover:scale-105 transition-all"
+      >
+        <span className="text-2xl leading-none">+</span>
+        <span className="text-sm font-semibold">Registrar mi día</span>
+      </button>
+
+      {modalAbierto && (
+        <RegistroDiarioModal
+          fecha={selectedDate}
+          sintomasSemana={data.symptoms}
+          onClose={() => setModalAbierto(false)}
+          onSaved={() => setRegistros(loadRegistros())}
+        />
+      )}
     </div>
   );
 }

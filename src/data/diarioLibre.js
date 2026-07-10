@@ -1,5 +1,3 @@
-const STORAGE_KEY = "mama-dashboard:diario-libre";
-
 export const prompts = [
   "¿Qué fue lo más lindo que sentiste hoy?",
   "¿Qué te dio miedo hoy, y por qué crees que fue así?",
@@ -12,18 +10,6 @@ export const prompts = [
   "Si pudieras hablar con tu yo de hace un año, ¿qué le dirías?",
   "¿Qué parte de tu cuerpo querés agradecer hoy?",
 ];
-
-export function loadEntradas() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveEntradas(entradas) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(entradas));
-}
 
 export function nuevoPromptAleatorio(actual) {
   const opciones = prompts.filter((p) => p !== actual);
