@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Sidebar from "./components/Sidebar";
 import InicioPanel from "./components/InicioPanel";
-import EmbarazoPanel from "./components/EmbarazoPanel";
+import ControlCitas from "./components/ControlCitas";
 import BienestarPanel from "./components/BienestarPanel";
 import PerfilPanel from "./components/PerfilPanel";
 import FeatureListPanel from "./components/FeatureListPanel";
@@ -16,13 +16,9 @@ export default function App() {
   const [authTab, setAuthTab] = useState("login");
   const [user, setUser] = useState(null);
   const [active, setActive] = useState("inicio");
-  const [embarazoView, setEmbarazoView] = useState("list");
-  const [navKey, setNavKey] = useState(0);
 
-  const handleNavigate = (section, subview) => {
+  const handleNavigate = (section) => {
     setActive(section);
-    setEmbarazoView(subview || "list");
-    setNavKey((k) => k + 1);
   };
 
   const enterApp = async (session) => {
@@ -96,21 +92,46 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[var(--bg)]">
-      <Sidebar active={active} onSelect={(id) => handleNavigate(id)} onLogout={handleLogout} />
-      <main className="flex-1 p-8 max-w-5xl">
-        {active === "inicio" ? (
-          <InicioPanel nombre={user?.nombre} onNavigate={handleNavigate} />
-        ) : active === "embarazo" ? (
-          <EmbarazoPanel key={navKey} initialView={embarazoView} />
-        ) : active === "bienestar" ? (
-          <BienestarPanel />
-        ) : active === "perfil" ? (
-          <PerfilPanel onLogout={handleLogout} />
-        ) : (
-          <FeatureListPanel sectionId={active} />
-        )}
-      </main>
+    <div className="min-h-screen bg-[var(--bg)] flex flex-col">
+      <header className="no-print h-14 shrink-0 flex items-center justify-end px-6 border-b border-rose-100 bg-white">
+        <button
+          onClick={() => handleNavigate("perfil")}
+          className={`flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-xl transition-colors ${
+            active === "perfil"
+              ? "bg-rose-500 text-white"
+              : "text-gray-600 hover:bg-rose-50 hover:text-rose-600"
+          }`}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            className="w-4 h-4"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+          </svg>
+          Mi Perfil
+        </button>
+      </header>
+      <div className="flex flex-1 min-h-0">
+        <Sidebar active={active} onSelect={(id) => handleNavigate(id)} onLogout={handleLogout} />
+        <main className="flex-1 p-8 max-w-5xl overflow-y-auto">
+          {active === "inicio" ? (
+            <InicioPanel nombre={user?.nombre} onNavigate={handleNavigate} />
+          ) : active === "citas" ? (
+            <ControlCitas />
+          ) : active === "bienestar" ? (
+            <BienestarPanel />
+          ) : active === "perfil" ? (
+            <PerfilPanel onLogout={handleLogout} />
+          ) : (
+            <FeatureListPanel sectionId={active} />
+          )}
+        </main>
+      </div>
     </div>
   );
 }

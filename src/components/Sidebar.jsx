@@ -2,7 +2,7 @@ import { sections } from "../data/sections";
 
 export default function Sidebar({ active, onSelect, onLogout }) {
   return (
-    <aside className="no-print w-64 shrink-0 h-screen sticky top-0 bg-white border-r border-rose-100 flex flex-col">
+    <aside className="no-print w-64 shrink-0 h-full bg-white border-r border-rose-100 flex flex-col">
       <div className="px-6 py-6 border-b border-rose-100">
         <p className="text-xs font-medium tracking-wide text-rose-400 uppercase">Tu compañera de embarazo</p>
         <h1 className="text-lg font-semibold text-gray-900 mt-1">Mamá App</h1>

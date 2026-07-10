@@ -6,14 +6,21 @@ import {
   guardarRegistroDelDia,
 } from "../data/registroDiario";
 import { prompts, nuevoPromptAleatorio } from "../data/diarioLibre";
-import { catalogoSintomas, iconoSintoma } from "../data/sintomas";
+import { catalogoSintomas as catalogoSintomasEmbarazo, iconoSintoma as iconoSintomaEmbarazo } from "../data/sintomas";
 
 function formatFechaLarga(iso) {
   const d = new Date(iso + "T00:00:00");
   return d.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
 }
 
-export default function RegistroDiarioModal({ fecha, sintomasSemana = [], onClose, onSaved }) {
+export default function RegistroDiarioModal({
+  fecha,
+  sintomasSemana = [],
+  catalogo = catalogoSintomasEmbarazo,
+  iconoSintoma = iconoSintomaEmbarazo,
+  onClose,
+  onSaved,
+}) {
   const existente = loadRegistroDelDia(fecha);
 
   const [animo, setAnimo] = useState(existente?.animo ?? null);
@@ -38,9 +45,9 @@ export default function RegistroDiarioModal({ fecha, sintomasSemana = [], onClos
     setSintomaPropio("");
   };
 
-  const catalogoRestante = catalogoSintomas.filter((s) => !sintomasSemana.includes(s.label));
+  const catalogoRestante = catalogo.filter((s) => !sintomasSemana.includes(s.label));
   const sintomasPropios = sintomas.filter(
-    (s) => !sintomasSemana.includes(s) && !catalogoSintomas.some((c) => c.label === s)
+    (s) => !sintomasSemana.includes(s) && !catalogo.some((c) => c.label === s)
   );
 
   const toggleConsigna = () => {

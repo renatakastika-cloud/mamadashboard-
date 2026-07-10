@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import CircularProgress from "./CircularProgress";
 import RegistroDiarioModal from "./RegistroDiarioModal";
+import InicioPostparto from "./InicioPostparto";
+import ContadorContracciones from "./ContadorContracciones";
 import { getWeekData, totalWeeks } from "../data/seguimientoSemanal";
 import { loadPerfil } from "../data/perfil";
 import { loadCitas, toISODate as toISODateCita } from "../data/citas";
 import { loadRegistros, calcularStreak } from "../data/registroDiario";
 import { esSintomaDeAtencion } from "../data/sintomas";
+import { loadBebe } from "../data/bebe";
 
 const tipoCitaIconos = {
   "Control obstétrico": "🩺",
@@ -20,16 +23,34 @@ const tipoCitaIconos = {
 
 const weekdayLabels = ["L", "M", "X", "J", "V", "S", "D"];
 
+const trimesterLabel = { 1: "1er trimestre", 2: "2do trimestre", 3: "3er trimestre" };
+const trimesterColor = {
+  1: { bg: "#fde7ef", text: "#f43f8c" },
+  2: { bg: "#ede9fe", text: "#8b6fd9" },
+  3: { bg: "#fff4e5", text: "#d97706" },
+};
+
 function formatFechaLarga(iso) {
   const d = new Date(iso + "T00:00:00");
   return d.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
 }
 
-function getWeekDates(refDate) {
-  const day = refDate.getDay();
+function mondayOf(date) {
+  const day = date.getDay();
   const diffToMonday = (day + 6) % 7;
-  const monday = new Date(refDate);
-  monday.setDate(refDate.getDate() - diffToMonday);
+  const monday = new Date(date);
+  monday.setDate(date.getDate() - diffToMonday);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+function weeksBetween(a, b) {
+  const diffMs = mondayOf(a).getTime() - mondayOf(b).getTime();
+  return Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
+}
+
+function getWeekDates(refDate) {
+  const monday = mondayOf(refDate);
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
@@ -41,6 +62,7 @@ export default function InicioPanel({ nombre, onNavigate }) {
   const today = useMemo(() => new Date(), []);
   const todayISO = toISODateCita(today);
 
+  const [view, setView] = useState("list");
   const [refDate, setRefDate] = useState(today);
   const [selectedDate, setSelectedDate] = useState(todayISO);
   const diasSemana = useMemo(() => getWeekDates(refDate), [refDate]);
@@ -49,15 +71,31 @@ export default function InicioPanel({ nombre, onNavigate }) {
   const [citas, setCitas] = useState([]);
   const [registros, setRegistros] = useState({});
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [bebe, setBebe] = useState(null);
 
   useEffect(() => {
     loadPerfil().then((p) => setSemanaActual(p.semanaActual));
     setCitas(loadCitas());
     setRegistros(loadRegistros());
+    setBebe(loadBebe());
   }, []);
 
-  const data = useMemo(() => getWeekData(semanaActual), [semanaActual]);
-  const porcentaje = Math.round((semanaActual / totalWeeks) * 100);
+  const semanaMostrada = useMemo(() => {
+    const delta = weeksBetween(refDate, today);
+    return Math.min(semanaActual, Math.max(1, semanaActual + delta));
+  }, [refDate, today, semanaActual]);
+
+  const data = useMemo(() => getWeekData(semanaMostrada), [semanaMostrada]);
+  const porcentaje = Math.round((semanaMostrada / totalWeeks) * 100);
+
+  const handleSliderChange = (nuevaSemana) => {
+    const delta = Math.min(semanaActual, nuevaSemana) - semanaMostrada;
+    setRefDate((prev) => {
+      const next = new Date(prev);
+      next.setDate(prev.getDate() + delta * 7);
+      return next;
+    });
+  };
 
   const proximaCita = useMemo(() => {
     return [...citas]
@@ -76,9 +114,12 @@ export default function InicioPanel({ nombre, onNavigate }) {
     setRefDate((prev) => {
       const next = new Date(prev);
       next.setDate(prev.getDate() + delta * 7);
+      if (weeksBetween(next, today) > 0) return prev;
       return next;
     });
   };
+
+  const enSemanaActual = semanaMostrada >= semanaActual;
 
   const esHoy = selectedDate === todayISO;
   const esFuturo = selectedDate > todayISO;
@@ -93,7 +134,7 @@ export default function InicioPanel({ nombre, onNavigate }) {
       icon: tipoCitaIconos[c.tipo] || "🗓️",
       title: c.tipo,
       subtitle: [c.hora, c.lugar].filter(Boolean).join(" · ") || "Sin hora ni lugar",
-      onClick: () => onNavigate?.("embarazo", "citas"),
+      onClick: () => onNavigate?.("citas"),
     }));
     const deRegistro = registroDelDia
       ? [
@@ -134,6 +175,14 @@ export default function InicioPanel({ nombre, onNavigate }) {
     return items;
   }, [esHoy, registroDelDia, onNavigate, semanaActual]);
 
+  if (bebe?.registrado) {
+    return <InicioPostparto nombre={nombre} bebe={bebe} onNavigate={onNavigate} />;
+  }
+
+  if (view === "contracciones") {
+    return <ContadorContracciones onBack={() => setView("list")} />;
+  }
+
   return (
     <div>
       {/* Encabezado */}
@@ -148,6 +197,46 @@ export default function InicioPanel({ nombre, onNavigate }) {
           <button className="w-9 h-9 rounded-full bg-white border border-rose-100 flex items-center justify-center text-gray-400 hover:text-rose-500">
             🔔
           </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-rose-100 p-5 shadow-sm mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-medium text-gray-700">
+            Semana {semanaMostrada} de {totalWeeks}
+          </p>
+          <span
+            className="text-xs px-2 py-0.5 rounded-full font-medium"
+            style={{
+              background: trimesterColor[data.trimester].bg,
+              color: trimesterColor[data.trimester].text,
+            }}
+          >
+            {trimesterLabel[data.trimester]}
+          </span>
+        </div>
+        <div className="relative flex items-center">
+          <input
+            type="range"
+            min={1}
+            max={semanaActual}
+            value={semanaMostrada}
+            onChange={(e) => handleSliderChange(Number(e.target.value))}
+            className="w-full accent-rose-500"
+          />
+          {!enSemanaActual && (
+            <button
+              onClick={() => handleSliderChange(semanaActual)}
+              className="absolute -right-1 w-3.5 h-3.5 rounded-full bg-gray-300 border-2 border-white hover:bg-gray-400 transition-colors"
+              aria-label={`Volver a tu semana actual (semana ${semanaActual})`}
+              title={`Volver a semana ${semanaActual}`}
+            />
+          )}
+        </div>
+        <div className="flex justify-between text-xs text-gray-400 mt-1">
+          <span>S.1</span>
+          <span>S.{Math.round(semanaActual / 2)}</span>
+          <span>S.{semanaActual}</span>
         </div>
       </div>
 
@@ -190,7 +279,11 @@ export default function InicioPanel({ nombre, onNavigate }) {
             );
           })}
         </div>
-        <button onClick={() => cambiarSemana(1)} className="text-gray-400 hover:text-rose-500 px-1">
+        <button
+          onClick={() => cambiarSemana(1)}
+          disabled={enSemanaActual}
+          className="text-gray-400 hover:text-rose-500 px-1 disabled:opacity-30 disabled:hover:text-gray-400 disabled:cursor-not-allowed"
+        >
           →
         </button>
       </div>
@@ -199,7 +292,7 @@ export default function InicioPanel({ nombre, onNavigate }) {
       <div className="bg-gradient-to-br from-rose-500 to-pink-400 rounded-3xl p-6 sm:p-8 shadow-sm mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-6 items-center mb-6">
           <CircularProgress value={porcentaje} size={130} stroke={9}>
-            <span className="text-xl font-semibold">Semana {semanaActual}</span>
+            <span className="text-xl font-semibold">Semana {semanaMostrada}</span>
             <span className="text-xs opacity-90">{porcentaje}% del camino</span>
           </CircularProgress>
 
@@ -218,18 +311,41 @@ export default function InicioPanel({ nombre, onNavigate }) {
           </div>
         </div>
 
-        <div className="bg-white/15 rounded-2xl p-4 mb-5">
+        <div className="bg-white/15 rounded-2xl p-4">
           <p className="text-xs text-white opacity-80 mb-1">Hito de esta semana</p>
           <p className="text-sm text-white">{data.milestone}</p>
         </div>
-
-        <button
-          onClick={() => onNavigate?.("embarazo", "seguimiento")}
-          className="bg-white text-rose-600 text-sm font-medium px-5 py-2 rounded-xl hover:bg-rose-50 transition-colors"
-        >
-          Ver semana completa
-        </button>
       </div>
+
+      {semanaActual >= 28 && (
+        <button
+          onClick={() => setView("contracciones")}
+          className="w-full text-left bg-white border border-dashed border-rose-200 rounded-2xl p-4 mb-3 hover:border-rose-400 transition-colors flex items-center justify-between gap-3"
+        >
+          <div>
+            <p className="text-sm font-medium text-gray-900">⏱️ Contador de contracciones</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Cronometrá cada contracción y el intervalo con la anterior
+            </p>
+          </div>
+          <span className="text-rose-400 text-sm shrink-0">＋</span>
+        </button>
+      )}
+
+      {semanaActual >= 28 && !bebe?.registrado && (
+        <button
+          onClick={() => onNavigate?.("perfil")}
+          className="w-full text-left bg-white border border-dashed border-rose-200 rounded-2xl p-4 mb-6 hover:border-rose-400 transition-colors flex items-center justify-between gap-3"
+        >
+          <div>
+            <p className="text-sm font-medium text-gray-900">¿Ya nació tu bebé?</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Registrá el nacimiento para activar tu cuarto trimestre
+            </p>
+          </div>
+          <span className="text-rose-400 text-sm shrink-0">＋</span>
+        </button>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
         {/* Columna principal: agenda */}
@@ -302,7 +418,7 @@ export default function InicioPanel({ nombre, onNavigate }) {
             </p>
             {proximaCita ? (
               <button
-                onClick={() => onNavigate?.("embarazo", "citas")}
+                onClick={() => onNavigate?.("citas")}
                 className="w-full text-left bg-rose-50 border border-rose-100 rounded-xl p-3 hover:border-rose-300 transition-colors"
               >
                 <div className="flex items-center gap-3">
@@ -318,7 +434,7 @@ export default function InicioPanel({ nombre, onNavigate }) {
               </button>
             ) : (
               <button
-                onClick={() => onNavigate?.("embarazo", "citas")}
+                onClick={() => onNavigate?.("citas")}
                 className="w-full text-left bg-rose-50 border border-rose-100 rounded-xl p-3 hover:border-rose-300 transition-colors"
               >
                 <p className="text-sm text-gray-700">No tenés citas agendadas</p>

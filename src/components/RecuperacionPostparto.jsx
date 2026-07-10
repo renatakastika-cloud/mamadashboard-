@@ -5,7 +5,20 @@ import {
   totalSemanasPostparto,
   loadRegistroPostparto,
   saveRegistroPostparto,
+  getGuiaTipoParto,
+  getGuiaSueloPelvico,
+  getGuiaEjercicio,
+  semanaPostpartoDesde,
 } from "../data/recuperacionPostparto";
+import { loadPlan } from "../data/planParto";
+import { loadBebe } from "../data/bebe";
+
+const tipoPartoLabel = {
+  natural: "parto vaginal",
+  epidural: "parto vaginal con epidural",
+  cesarea: "cesárea",
+  abierta: "tu tipo de parto",
+};
 
 const animoOpciones = [
   { value: 1, emoji: "😢" },
@@ -19,8 +32,17 @@ export default function RecuperacionPostparto({ onBack }) {
   const [semana, setSemana] = useState(1);
   const [registro, setRegistro] = useState({});
   const [saved, setSaved] = useState(false);
+  const [tipoParto, setTipoParto] = useState("abierta");
 
   const data = getSemanaPostpartoData(semana);
+
+  useEffect(() => {
+    const plan = loadPlan();
+    setTipoParto(plan.tipoPartoDeseado || "abierta");
+
+    const bebe = loadBebe();
+    if (bebe.registrado) setSemana(semanaPostpartoDesde(bebe.fechaNacimiento));
+  }, []);
 
   useEffect(() => {
     const all = loadRegistroPostparto();
@@ -56,7 +78,7 @@ export default function RecuperacionPostparto({ onBack }) {
         onClick={onBack}
         className="text-sm text-gray-500 hover:text-rose-500 mb-4 flex items-center gap-1"
       >
-        ← Volver a Mi Embarazo
+        ← Volver a Inicio
       </button>
 
       <Header
@@ -83,9 +105,32 @@ export default function RecuperacionPostparto({ onBack }) {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-rose-100 mb-8">
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-rose-100 mb-6">
         <p className="text-sm text-gray-500 mb-2">Qué esperar esta semana</p>
         <p className="text-sm text-gray-800 leading-relaxed">{data.hito}</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-rose-100">
+          <p className="text-xs text-gray-500 mb-2">
+            Recuperación de {tipoPartoLabel[tipoParto]}
+          </p>
+          <p className="text-sm text-gray-800 leading-relaxed">
+            {getGuiaTipoParto(semana, tipoParto)}
+          </p>
+        </div>
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-rose-100">
+          <p className="text-xs text-gray-500 mb-2">Suelo pélvico</p>
+          <p className="text-sm text-gray-800 leading-relaxed">
+            {getGuiaSueloPelvico(semana)}
+          </p>
+        </div>
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-rose-100">
+          <p className="text-xs text-gray-500 mb-2">Retomar ejercicio</p>
+          <p className="text-sm text-gray-800 leading-relaxed">
+            {getGuiaEjercicio(semana, tipoParto)}
+          </p>
+        </div>
       </div>
 
       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">

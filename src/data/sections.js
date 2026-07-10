@@ -1,10 +1,9 @@
 export const sections = [
   { id: "inicio", label: "Inicio", icon: "🏠" },
-  { id: "embarazo", label: "Mi Embarazo", icon: "🩺" },
+  { id: "citas", label: "Citas", icon: "🗓️" },
   { id: "bienestar", label: "Mi Bienestar", icon: "💜" },
   { id: "multimedia", label: "Multimedia", icon: "🎧" },
   { id: "comunidad", label: "Comunidad", icon: "👥" },
-  { id: "perfil", label: "Mi Perfil", icon: "📋" },
 ];
 
 export const mvpFeatures = {

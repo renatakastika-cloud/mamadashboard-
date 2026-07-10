@@ -20,6 +20,7 @@ export const tiposCita = [
   "Odontología",
   "Nutrición",
   "Psicología perinatal",
+  "Primera consulta postparto",
   "Otro",
 ];
 

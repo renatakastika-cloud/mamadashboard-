@@ -52,7 +52,7 @@ export default function ChecklistHospital({ onBack }) {
         onClick={onBack}
         className="text-sm text-gray-500 hover:text-rose-500 mb-4 flex items-center gap-1"
       >
-        ← Volver a Mi Embarazo
+        ← Volver a Mi Perfil
       </button>
 
       <Header

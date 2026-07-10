@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Header from "./Header";
+import FeatureCard from "./FeatureCard";
+import GuiaExamenes from "./GuiaExamenes";
 import {
   loadCitas,
   saveCitas,
@@ -9,6 +11,13 @@ import {
   weekdayLabels,
   monthLabels,
 } from "../data/citas";
+import {
+  preguntasSugeridas,
+  loadPrimeraConsulta,
+  savePrimeraConsulta,
+} from "../data/primeraConsultaPostparto";
+
+const TIPO_PRIMERA_CONSULTA_POSTPARTO = "Primera consulta postparto";
 
 const emptyForm = {
   fecha: "",
@@ -23,6 +32,7 @@ const emptyForm = {
 
 export default function ControlCitas({ onBack }) {
   const today = useMemo(() => new Date(), []);
+  const [view, setView] = useState("list");
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
   const [citas, setCitas] = useState([]);
   const [selectedDate, setSelectedDate] = useState(toISODate(today));
@@ -30,10 +40,38 @@ export default function ControlCitas({ onBack }) {
   const [editingId, setEditingId] = useState(null);
   const [saved, setSaved] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [marcadas, setMarcadas] = useState([]);
+  const [propias, setPropias] = useState([]);
+  const [nuevaPregunta, setNuevaPregunta] = useState("");
 
   useEffect(() => {
     setCitas(loadCitas());
+    const data = loadPrimeraConsulta();
+    setMarcadas(data.marcadas);
+    setPropias(data.propias);
   }, []);
+
+  useEffect(() => {
+    savePrimeraConsulta({ marcadas, propias });
+  }, [marcadas, propias]);
+
+  const togglePregunta = (item) => {
+    setMarcadas((prev) =>
+      prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item]
+    );
+  };
+
+  const agregarPreguntaPropia = () => {
+    const texto = nuevaPregunta.trim();
+    if (!texto) return;
+    setPropias((prev) => [...prev, { id: Date.now().toString(), texto }]);
+    setNuevaPregunta("");
+  };
+
+  const eliminarPreguntaPropia = (id) => {
+    setPropias((prev) => prev.filter((p) => p.id !== id));
+    setMarcadas((prev) => prev.filter((x) => x !== id));
+  };
 
   const grid = useMemo(() => getMonthGrid(cursor.year, cursor.month), [cursor]);
 
@@ -118,16 +156,22 @@ export default function ControlCitas({ onBack }) {
 
   const todayISO = toISODate(today);
 
+  if (view === "examenes") {
+    return <GuiaExamenes onBack={() => setView("list")} />;
+  }
+
   return (
     <div>
-      <button
-        onClick={onBack}
-        className="text-sm text-gray-500 hover:text-rose-500 mb-4 flex items-center gap-1"
-      >
-        ← Volver a Mi Embarazo
-      </button>
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="text-sm text-gray-500 hover:text-rose-500 mb-4 flex items-center gap-1"
+        >
+          ← Volver
+        </button>
+      )}
 
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between mb-6">
         <Header
           title="🗓️ Control de citas"
           subtitle="Agenda, recordatorios y preguntas para el médico — todo en un calendario"
@@ -138,6 +182,15 @@ export default function ControlCitas({ onBack }) {
         >
           + Agregar cita
         </button>
+      </div>
+
+      <div className="max-w-xl mb-6">
+        <FeatureCard
+          icon="🧪"
+          title="Guía de exámenes por semana"
+          desc="Qué estudios suelen pedirse en cada trimestre"
+          onClick={() => setView("examenes")}
+        />
       </div>
 
       <div className="bg-white rounded-2xl border border-rose-100 p-5 shadow-sm max-w-xl">
@@ -313,14 +366,96 @@ export default function ControlCitas({ onBack }) {
               className="w-full border border-rose-100 rounded-xl p-2 text-sm text-gray-700 mb-3 focus:outline-none focus:border-rose-300"
             />
 
-            <label className="text-xs text-gray-500 block mb-1">Preguntas para el médico</label>
-            <textarea
-              value={form.preguntas}
-              onChange={(e) => updateField("preguntas", e.target.value)}
-              placeholder="Ej: ¿es normal sentir...?"
-              className="w-full border border-rose-100 rounded-xl p-2 text-sm text-gray-700 mb-3 focus:outline-none focus:border-rose-300 resize-none"
-              rows={2}
-            />
+            {form.tipo === TIPO_PRIMERA_CONSULTA_POSTPARTO ? (
+              <div className="mb-3">
+                <p className="text-xs text-gray-500 mb-2">
+                  Preguntas sugeridas para tu primera consulta postparto
+                </p>
+                <ul className="space-y-2 mb-3">
+                  {preguntasSugeridas.map((p) => {
+                    const checked = marcadas.includes(p);
+                    return (
+                      <li key={p}>
+                        <button
+                          type="button"
+                          onClick={() => togglePregunta(p)}
+                          className="flex items-center gap-2 w-full text-left text-sm"
+                        >
+                          <span
+                            className={`w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 ${
+                              checked ? "bg-rose-500 border-rose-500 text-white" : "border-rose-200"
+                            }`}
+                          >
+                            {checked && "✓"}
+                          </span>
+                          <span className={checked ? "text-gray-400 line-through" : "text-gray-700"}>
+                            {p}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                  {propias.map((p) => {
+                    const checked = marcadas.includes(p.id);
+                    return (
+                      <li key={p.id} className="flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => togglePregunta(p.id)}
+                          className="flex items-center gap-2 text-left text-sm flex-1"
+                        >
+                          <span
+                            className={`w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 ${
+                              checked ? "bg-rose-500 border-rose-500 text-white" : "border-rose-200"
+                            }`}
+                          >
+                            {checked && "✓"}
+                          </span>
+                          <span className={checked ? "text-gray-400 line-through" : "text-gray-700"}>
+                            {p.texto}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => eliminarPreguntaPropia(p.id)}
+                          className="text-xs text-gray-400 hover:text-red-500"
+                        >
+                          Eliminar
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={nuevaPregunta}
+                    onChange={(e) => setNuevaPregunta(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && agregarPreguntaPropia()}
+                    placeholder="Ej: ¿es normal esta molestia en...?"
+                    className="flex-1 border border-rose-100 rounded-xl p-2 text-sm text-gray-700 focus:outline-none focus:border-rose-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={agregarPreguntaPropia}
+                    className="bg-rose-500 text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-rose-600 transition-colors whitespace-nowrap"
+                  >
+                    + Agregar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <label className="text-xs text-gray-500 block mb-1">Preguntas para el médico</label>
+                <textarea
+                  value={form.preguntas}
+                  onChange={(e) => updateField("preguntas", e.target.value)}
+                  placeholder="Ej: ¿es normal sentir...?"
+                  className="w-full border border-rose-100 rounded-xl p-2 text-sm text-gray-700 mb-3 focus:outline-none focus:border-rose-300 resize-none"
+                  rows={2}
+                />
+              </>
+            )}
 
             <label className="text-xs text-gray-500 block mb-1">Notas adicionales</label>
             <textarea
