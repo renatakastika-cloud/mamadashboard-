@@ -7,14 +7,19 @@ import {
 } from "../data/examenesSemanales";
 import { getWeekData } from "../data/seguimientoSemanal";
 import { loadPerfil } from "../data/perfil";
+import { loadCitas, saveCitas } from "../data/citas";
 
 export default function GuiaExamenes({ onBack }) {
   const [trimestreActual, setTrimestreActual] = useState(null);
   const [registro, setRegistro] = useState({});
+  const [citas, setCitas] = useState([]);
+  const [agendandoId, setAgendandoId] = useState(null);
+  const [agendaForm, setAgendaForm] = useState({ fecha: "", hora: "", lugar: "" });
 
   useEffect(() => {
     loadPerfil().then((p) => setTrimestreActual(getWeekData(p.semanaActual).trimester));
     setRegistro(loadRegistroExamenes());
+    setCitas(loadCitas());
   }, []);
 
   const bloquesVisibles = useMemo(() => {
@@ -60,6 +65,53 @@ export default function GuiaExamenes({ onBack }) {
 
   const eliminarArchivo = (id) => {
     actualizarExamen(id, "archivo", null);
+  };
+
+  const abrirAgenda = (ex, citaExistente) => {
+    setAgendandoId(ex.id);
+    setAgendaForm({
+      fecha: citaExistente?.fecha || "",
+      hora: citaExistente?.hora || "",
+      lugar: citaExistente?.lugar || "",
+    });
+  };
+
+  const cancelarAgenda = () => setAgendandoId(null);
+
+  const guardarAgenda = (ex) => {
+    if (!agendaForm.fecha) return;
+    const datos = registro[ex.id] || {};
+    const citaExistente = datos.citaId ? citas.find((c) => c.id === datos.citaId) : null;
+
+    let nextCitas;
+    if (citaExistente) {
+      nextCitas = citas.map((c) => (c.id === citaExistente.id ? { ...c, ...agendaForm } : c));
+    } else {
+      const nuevaCita = {
+        id: `examen-${ex.id}-${Date.now()}`,
+        fecha: agendaForm.fecha,
+        hora: agendaForm.hora,
+        lugar: agendaForm.lugar,
+        tipo: ex.nombre,
+        medico: "",
+        preguntas: "",
+        notas: ex.desc,
+        compartirPartner: false,
+        examenId: ex.id,
+      };
+      nextCitas = [...citas, nuevaCita];
+      actualizarExamen(ex.id, "citaId", nuevaCita.id);
+    }
+    setCitas(nextCitas);
+    saveCitas(nextCitas);
+    setAgendandoId(null);
+  };
+
+  const quitarAgenda = (ex, citaId) => {
+    const nextCitas = citas.filter((c) => c.id !== citaId);
+    setCitas(nextCitas);
+    saveCitas(nextCitas);
+    actualizarExamen(ex.id, "citaId", null);
   };
 
   return (
@@ -119,6 +171,14 @@ export default function GuiaExamenes({ onBack }) {
               <div className="space-y-3">
                 {bloque.examenes.map((ex) => {
                   const datos = registro[ex.id] || {};
+                  const citaVinculada = datos.citaId
+                    ? citas.find((c) => c.id === datos.citaId)
+                    : null;
+                  const estadoVisual = datos.hecho
+                    ? "hecho"
+                    : citaVinculada
+                    ? "agendado"
+                    : "pendiente";
                   return (
                     <div
                       key={ex.id}
@@ -129,11 +189,16 @@ export default function GuiaExamenes({ onBack }) {
                         className="flex items-start gap-3 w-full text-left"
                       >
                         <span
-                          className={`w-5 h-5 mt-0.5 rounded-md border flex items-center justify-center flex-shrink-0 ${
-                            datos.hecho ? "bg-rose-500 border-rose-500 text-white" : "border-rose-200"
+                          className={`w-5 h-5 mt-0.5 rounded-md border flex items-center justify-center flex-shrink-0 text-xs ${
+                            estadoVisual === "hecho"
+                              ? "bg-rose-500 border-rose-500 text-white"
+                              : estadoVisual === "agendado"
+                              ? "bg-amber-50 border-amber-400 text-amber-500"
+                              : "border-rose-200"
                           }`}
                         >
-                          {datos.hecho && "✓"}
+                          {estadoVisual === "hecho" && "✓"}
+                          {estadoVisual === "agendado" && "🗓"}
                         </span>
                         <span className="flex-1 min-w-0">
                           <span className="flex items-center justify-between gap-2">
@@ -151,6 +216,84 @@ export default function GuiaExamenes({ onBack }) {
                           <span className="block text-xs text-gray-500 mt-0.5">{ex.desc}</span>
                         </span>
                       </button>
+
+                      <div className="mt-2 ml-8">
+                        {citaVinculada ? (
+                          <div className="flex items-center gap-2 flex-wrap text-xs">
+                            <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-600 border border-amber-200 px-2 py-1 rounded-full">
+                              🗓 Agendada {citaVinculada.fecha}
+                              {citaVinculada.hora && ` · ${citaVinculada.hora}`}
+                            </span>
+                            <button
+                              onClick={() => abrirAgenda(ex, citaVinculada)}
+                              className="text-rose-500 hover:underline"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => quitarAgenda(ex, citaVinculada.id)}
+                              className="text-gray-400 hover:text-red-500 hover:underline"
+                            >
+                              Quitar
+                            </button>
+                          </div>
+                        ) : (
+                          !datos.hecho && (
+                            <button
+                              onClick={() => abrirAgenda(ex, null)}
+                              className="text-xs text-rose-500 hover:underline inline-flex items-center gap-1"
+                            >
+                              📅 Agregar al calendario
+                            </button>
+                          )
+                        )}
+
+                        {agendandoId === ex.id && (
+                          <div className="mt-2 p-3 bg-rose-50/50 border border-rose-100 rounded-xl space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              <input
+                                type="date"
+                                value={agendaForm.fecha}
+                                onChange={(e) =>
+                                  setAgendaForm((prev) => ({ ...prev, fecha: e.target.value }))
+                                }
+                                className="w-full border border-rose-100 rounded-xl p-2 text-sm text-gray-700 focus:outline-none focus:border-rose-300"
+                              />
+                              <input
+                                type="time"
+                                value={agendaForm.hora}
+                                onChange={(e) =>
+                                  setAgendaForm((prev) => ({ ...prev, hora: e.target.value }))
+                                }
+                                className="w-full border border-rose-100 rounded-xl p-2 text-sm text-gray-700 focus:outline-none focus:border-rose-300"
+                              />
+                            </div>
+                            <input
+                              type="text"
+                              value={agendaForm.lugar}
+                              onChange={(e) =>
+                                setAgendaForm((prev) => ({ ...prev, lugar: e.target.value }))
+                              }
+                              placeholder="Lugar (opcional)"
+                              className="w-full border border-rose-100 rounded-xl p-2 text-sm text-gray-700 focus:outline-none focus:border-rose-300"
+                            />
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => guardarAgenda(ex)}
+                                className="bg-rose-500 text-white text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-rose-600 transition-colors"
+                              >
+                                Guardar
+                              </button>
+                              <button
+                                onClick={cancelarAgenda}
+                                className="text-xs text-gray-500 hover:text-rose-500"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
 
                       <div className="mt-3 ml-8 space-y-2">
                         <textarea
