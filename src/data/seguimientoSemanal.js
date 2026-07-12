@@ -116,10 +116,26 @@ const symptomSets = {
   ],
 };
 
-function trimesterOf(week) {
+export function trimesterOf(week) {
   if (week <= 12) return 1;
   if (week <= 27) return 2;
   return 3;
+}
+
+function mondayOf(date) {
+  const day = date.getDay();
+  const diffToMonday = (day + 6) % 7;
+  const monday = new Date(date);
+  monday.setDate(date.getDate() - diffToMonday);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+export function semanaEnFecha(fechaISO, semanaActual, hoy = new Date()) {
+  const fecha = new Date(fechaISO + "T00:00:00");
+  const diffMs = mondayOf(fecha).getTime() - mondayOf(hoy).getTime();
+  const delta = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
+  return Math.min(semanaActual, Math.max(1, semanaActual + delta));
 }
 
 export const totalWeeks = 40;

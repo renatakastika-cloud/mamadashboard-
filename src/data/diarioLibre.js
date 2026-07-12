@@ -22,29 +22,3 @@ export function toISODate(date) {
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
-
-export const weekdayLabels = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
-export const weekdayLabelsLargo = [
-  "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo",
-];
-
-export function getWeekDates(refDate) {
-  const day = refDate.getDay();
-  const diffToMonday = (day + 6) % 7;
-  const monday = new Date(refDate);
-  monday.setDate(refDate.getDate() - diffToMonday);
-  monday.setHours(0, 0, 0, 0);
-
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return d;
-  });
-}
-
-export function formatRangoSemana(dias) {
-  const opciones = { day: "numeric", month: "short" };
-  const inicio = dias[0].toLocaleDateString("es-AR", opciones);
-  const fin = dias[6].toLocaleDateString("es-AR", opciones);
-  return `${inicio} – ${fin}`;
-}
