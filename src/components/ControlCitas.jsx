@@ -10,6 +10,7 @@ import {
   getMonthGrid,
   weekdayLabels,
   monthLabels,
+  buildGoogleCalendarUrl,
 } from "../data/citas";
 import {
   preguntasSugeridas,
@@ -348,7 +349,19 @@ export default function ControlCitas({ onBack }) {
         >
           {isModal ? "Cancelar" : "Limpiar"}
         </button>
-        {saved && <span className="text-sm text-green-600">Guardado ✓</span>}
+        {saved && (
+          <span className="text-sm text-green-600 flex items-center gap-2">
+            Guardado ✓
+            <a
+              href={buildGoogleCalendarUrl(form)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-rose-500 hover:underline"
+            >
+              📅 Agregar a Google Calendar
+            </a>
+          </span>
+        )}
       </div>
     </>
   );
@@ -470,6 +483,15 @@ export default function ControlCitas({ onBack }) {
                   </p>
                 </div>
                 <div className="flex gap-2 text-xs">
+                  <a
+                    href={buildGoogleCalendarUrl(c)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-rose-500 hover:underline whitespace-nowrap"
+                    title="Agregar a Google Calendar"
+                  >
+                    📅 Google
+                  </a>
                   <button
                     onClick={() => handleEditar(c)}
                     className="text-rose-500 hover:underline"

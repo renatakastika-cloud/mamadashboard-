@@ -44,6 +44,43 @@ export function getMonthGrid(year, month) {
   return cells;
 }
 
+export function buildGoogleCalendarUrl(cita) {
+  const [year, month, day] = cita.fecha.split("-").map(Number);
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const fmtDate = (d) => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`;
+  const fmtDateTime = (d) => `${fmtDate(d)}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
+
+  let dates;
+  if (cita.hora) {
+    const [h, m] = cita.hora.split(":").map(Number);
+    const inicio = new Date(year, month - 1, day, h, m, 0, 0);
+    const fin = new Date(inicio.getTime() + 60 * 60 * 1000);
+    dates = `${fmtDateTime(inicio)}/${fmtDateTime(fin)}`;
+  } else {
+    const inicio = new Date(year, month - 1, day);
+    const fin = new Date(year, month - 1, day + 1);
+    dates = `${fmtDate(inicio)}/${fmtDate(fin)}`;
+  }
+
+  const detalles = [
+    cita.medico && `Médico/profesional: ${cita.medico}`,
+    cita.preguntas && `Preguntas: ${cita.preguntas}`,
+    cita.notas && `Notas: ${cita.notas}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: cita.medico ? `${cita.tipo} con ${cita.medico}` : cita.tipo,
+    dates,
+  });
+  if (detalles) params.set("details", detalles);
+  if (cita.lugar) params.set("location", cita.lugar);
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
 export const weekdayLabels = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
 export const monthLabels = [
