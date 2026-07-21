@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { login, signup } from "../../data/auth";
+import { login, signup, verifySignupCode, resendSignupCode } from "../../data/auth";
 
 const inputClass =
   "w-full border border-rose-100 rounded-xl p-2.5 text-sm text-gray-700 focus:outline-none focus:border-rose-300";
@@ -94,6 +94,101 @@ function PasswordChecklist({ password }) {
   );
 }
 
+function VerifyCodeStep({ nombre, email, password, onVerified, onBack }) {
+  const [code, setCode] = useState("");
+  const [error, setError] = useState("");
+  const [infoMsg, setInfoMsg] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    setError("");
+    setInfoMsg("");
+    setLoading(true);
+    const result = await verifySignupCode({ nombre, email, password, code });
+    setLoading(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    onVerified(result.user);
+  };
+
+  const handleResend = async () => {
+    setError("");
+    setInfoMsg("");
+    setResending(true);
+    const result = await resendSignupCode({ email });
+    setResending(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    setInfoMsg("Te reenviamos el código.");
+  };
+
+  return (
+    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center px-6">
+      <div className="w-full max-w-sm">
+        <button
+          onClick={onBack}
+          className="text-sm text-gray-500 hover:text-rose-500 mb-6 flex items-center gap-1"
+        >
+          ← Volver
+        </button>
+
+        <div className="flex items-center gap-2 mb-6">
+          <span className="text-xl">🤰</span>
+          <span className="font-semibold text-gray-900">Mamá App</span>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-rose-100 shadow-sm p-7">
+          <h2 className="text-base font-semibold text-gray-900 mb-1">Verificá tu email</h2>
+          <p className="text-xs text-gray-500 mb-5">
+            Te enviamos un código de 6 dígitos a <span className="font-medium">{email}</span>.
+          </p>
+
+          <form onSubmit={handleVerify}>
+            <div className="mb-3">
+              <label className="text-xs text-gray-500 block mb-1">Código</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="123456"
+                className={`${inputClass} text-center tracking-widest text-base`}
+                maxLength={6}
+              />
+            </div>
+
+            {infoMsg && <p className="text-xs text-green-600 mb-3">{infoMsg}</p>}
+            {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-rose-500 text-white text-sm font-medium py-2.5 rounded-xl hover:bg-rose-600 transition-colors disabled:opacity-60"
+            >
+              {loading ? "Verificando…" : "Verificar"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resending}
+              className="w-full text-xs text-gray-500 hover:text-rose-500 mt-4 disabled:opacity-60"
+            >
+              {resending ? "Reenviando…" : "Reenviar código"}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AuthPage({ initialTab = "login", onSuccess, onBack }) {
   const [tab, setTab] = useState(initialTab);
   const [nombre, setNombre] = useState("");
@@ -103,6 +198,7 @@ export default function AuthPage({ initialTab = "login", onSuccess, onBack }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [infoMsg, setInfoMsg] = useState("");
+  const [pendingEmail, setPendingEmail] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -132,14 +228,28 @@ export default function AuthPage({ initialTab = "login", onSuccess, onBack }) {
       return;
     }
     if (result.needsVerification) {
-      setTab("login");
-      setPassword("");
-      setConfirmPassword("");
-      setInfoMsg("Cuenta creada. Iniciá sesión con tu email y contraseña.");
+      setPendingEmail(result.email);
       return;
     }
     onSuccess(result.user);
   };
+
+  if (pendingEmail) {
+    return (
+      <VerifyCodeStep
+        nombre={nombre}
+        email={pendingEmail}
+        password={password}
+        onVerified={onSuccess}
+        onBack={() => {
+          setPendingEmail(null);
+          setTab("login");
+          setPassword("");
+          setConfirmPassword("");
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center px-6">

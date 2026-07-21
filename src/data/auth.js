@@ -5,45 +5,54 @@ function mapUser(user) {
   return { id: user.id, nombre: user.user_metadata?.nombre || "", email: user.email };
 }
 
+async function postJson(url, body) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return { ok: false, error: data.error || "Ocurrió un error. Intentá de nuevo." };
+  }
+  return { ok: true, ...data };
+}
+
 export async function signup({ nombre, email, password }) {
   if (!nombre?.trim() || !email?.trim() || !password) {
     return { ok: false, error: "Completá todos los campos." };
   }
-  const { data, error } = await supabase.auth.signUp({
-    email: email.trim(),
-    password,
-    options: { data: { nombre: nombre.trim() } },
-  });
-  if (error) {
-    return { ok: false, error: error.message };
+  const result = await postJson("/api/auth/send-verification-code", { email: email.trim() });
+  if (!result.ok) {
+    return result;
   }
-  if (!data.session) {
-    return { ok: true, needsVerification: true, email: email.trim() };
-  }
-  return { ok: true, user: mapUser(data.user) };
+  return { ok: true, needsVerification: true, email: email.trim() };
 }
 
-export async function verifySignupCode({ email, code }) {
+export async function verifySignupCode({ nombre, email, password, code }) {
   if (!code?.trim()) {
     return { ok: false, error: "Ingresá el código." };
   }
-  const { data, error } = await supabase.auth.verifyOtp({
+  const result = await postJson("/api/auth/verify-and-signup", {
+    nombre,
     email: email.trim(),
-    token: code.trim(),
-    type: "signup",
+    password,
+    code: code.trim(),
   });
-  if (error) {
-    return { ok: false, error: "Código inválido o vencido." };
+  if (!result.ok) {
+    return result;
   }
-  return { ok: true, user: mapUser(data.user) };
+
+  const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+  if (error) {
+    return { ok: false, error: "Cuenta creada. Iniciá sesión con tu email y contraseña." };
+  }
+  const { data } = await supabase.auth.getSession();
+  return { ok: true, user: mapUser(data.session?.user) };
 }
 
 export async function resendSignupCode({ email }) {
-  const { error } = await supabase.auth.resend({ type: "signup", email: email.trim() });
-  if (error) {
-    return { ok: false, error: error.message };
-  }
-  return { ok: true };
+  return postJson("/api/auth/send-verification-code", { email: email.trim() });
 }
 
 export async function login({ email, password }) {
