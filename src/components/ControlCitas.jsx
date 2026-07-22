@@ -17,6 +17,12 @@ import {
   loadPrimeraConsulta,
   savePrimeraConsulta,
 } from "../data/primeraConsultaPostparto";
+import {
+  getGoogleCalendarStatus,
+  connectGoogleCalendar,
+  disconnectGoogleCalendar,
+  getGoogleCalendarEvents,
+} from "../data/googleCalendar";
 
 const TIPO_PRIMERA_CONSULTA_POSTPARTO = "Primera consulta postparto";
 
@@ -44,13 +50,48 @@ export default function ControlCitas({ onBack }) {
   const [marcadas, setMarcadas] = useState([]);
   const [propias, setPropias] = useState([]);
   const [nuevaPregunta, setNuevaPregunta] = useState("");
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(true);
+  const [googleEvents, setGoogleEvents] = useState([]);
+  const [googleMsg, setGoogleMsg] = useState(null);
 
   useEffect(() => {
     setCitas(loadCitas());
     const data = loadPrimeraConsulta();
     setMarcadas(data.marcadas);
     setPropias(data.propias);
+
+    const params = new URLSearchParams(window.location.search);
+    const googleParam = params.get("google_calendar");
+    if (googleParam) {
+      setGoogleMsg(googleParam === "connected" ? "success" : "error");
+      params.delete("google_calendar");
+      const query = params.toString();
+      window.history.replaceState({}, "", window.location.pathname + (query ? `?${query}` : ""));
+    }
+
+    getGoogleCalendarStatus()
+      .then((s) => setGoogleConnected(s.connected))
+      .finally(() => setGoogleLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!googleConnected) {
+      setGoogleEvents([]);
+      return;
+    }
+    getGoogleCalendarEvents(selectedDate).then((r) => setGoogleEvents(r.events || []));
+  }, [googleConnected, selectedDate]);
+
+  const handleConectarGoogle = () => {
+    connectGoogleCalendar();
+  };
+
+  const handleDesconectarGoogle = async () => {
+    await disconnectGoogleCalendar();
+    setGoogleConnected(false);
+    setGoogleEvents([]);
+  };
 
   useEffect(() => {
     savePrimeraConsulta({ marcadas, propias });
@@ -401,6 +442,43 @@ export default function ControlCitas({ onBack }) {
         </button>
       </div>
 
+      {googleMsg && (
+        <div
+          className={`mb-4 text-sm rounded-xl px-4 py-2 ${
+            googleMsg === "success"
+              ? "bg-green-50 text-green-700 border border-green-100"
+              : "bg-red-50 text-red-600 border border-red-100"
+          }`}
+        >
+          {googleMsg === "success"
+            ? "✓ Google Calendar conectado."
+            : "No se pudo conectar tu Google Calendar. Intentá de nuevo."}
+        </div>
+      )}
+
+      {!googleLoading && (
+        <div className="flex items-center gap-3 mb-6 text-sm">
+          {googleConnected ? (
+            <>
+              <span className="text-gray-600">📅 Google Calendar conectado</span>
+              <button
+                onClick={handleDesconectarGoogle}
+                className="text-gray-400 hover:text-red-500 hover:underline"
+              >
+                Desconectar
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleConectarGoogle}
+              className="text-rose-500 hover:underline"
+            >
+              📅 Conectar Google Calendar (para ver cuándo estás ocupada)
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-6 items-start">
       <div>
       <div className="bg-white rounded-2xl border border-rose-100 p-5 shadow-sm max-w-xl">
@@ -462,6 +540,31 @@ export default function ControlCitas({ onBack }) {
         <p className="text-xs text-gray-400 mt-3">
           Tocá un día para agregar una cita en esa fecha.
         </p>
+
+        {googleConnected && (
+          <div className="mt-4 bg-gray-50 border border-gray-100 rounded-xl p-3">
+            <p className="text-xs font-medium text-gray-600 mb-2">
+              Tu Google Calendar el {selectedDate}
+            </p>
+            {googleEvents.length === 0 ? (
+              <p className="text-xs text-gray-400">No estás ocupada ese día 🎉</p>
+            ) : (
+              <ul className="space-y-1">
+                {googleEvents.map((ev) => (
+                  <li key={ev.id} className="text-xs text-gray-600">
+                    {ev.allDay
+                      ? "Todo el día"
+                      : new Date(ev.start).toLocaleTimeString("es-AR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}{" "}
+                    · {ev.title}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         <div className="mt-5">
           <p className="text-sm font-medium text-gray-700 mb-2">Próximas citas</p>

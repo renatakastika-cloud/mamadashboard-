@@ -1,7 +1,7 @@
 import { supabase } from "../lib/supabaseClient";
 
 export const emptyPerfil = {
-  semanaActual: 24,
+  semanaActual: 32,
   fpp: "",
   medico: "",
   hospital: "",
