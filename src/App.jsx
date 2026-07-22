@@ -4,6 +4,7 @@ import InicioPanel from "./components/InicioPanel";
 import ControlCitas from "./components/ControlCitas";
 import BienestarPanel from "./components/BienestarPanel";
 import PerfilPanel from "./components/PerfilPanel";
+import ComunidadPanel from "./components/ComunidadPanel";
 import FeatureListPanel from "./components/FeatureListPanel";
 import LandingPage from "./components/landing/LandingPage";
 import AuthPage from "./components/auth/AuthPage";
@@ -127,6 +128,8 @@ export default function App() {
             <BienestarPanel />
           ) : active === "perfil" ? (
             <PerfilPanel onLogout={handleLogout} />
+          ) : active === "comunidad" ? (
+            <ComunidadPanel nombre={user?.nombre} />
           ) : (
             <FeatureListPanel sectionId={active} />
           )}
